@@ -8,12 +8,18 @@ import com.jev.probe.core.Prefs
 import com.jev.probe.core.RankedReply
 import com.jev.probe.core.Score
 import com.jev.probe.core.kb.ChatContext
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * The Jev judgment route only: the 7 judgment questions in one call, and the
  * ranking question over already-drafted candidates. Reads judgeProvider /
- * judgeBaseUrl / judgeKey / judgeModel from [Prefs]; nothing generative here.
+ * judgeBaseUrl / judgeKey / judgeModel from [Prefs].
+ *
+ * fox-1.5: providers "chat" and "custom" speak standard OpenAI-compatible
+ * chat completions — [JudgePrompt] renders the same state + question set as
+ * a prompt and the model returns the same answers JSON. Only "openrouter"
+ * and "typesafe" still use the private decisions protocol.
  */
 class JudgeClient(private val prefs: Prefs) {
 
@@ -90,6 +96,12 @@ class JudgeClient(private val prefs: Prefs) {
     }
 
     private fun send(state: JSONObject, questions: JSONObject): JSONObject {
+        return if (prefs.judgeIsChat()) sendChat(state, questions)
+        else sendDecisions(state, questions)
+    }
+
+    /** Private Jev protocol: {model, state, questions} to the decisions endpoint. */
+    private fun sendDecisions(state: JSONObject, questions: JSONObject): JSONObject {
         val url = prefs.judgeEndpoint()
         val body = JSONObject()
             .put("model", prefs.judgeModel)
@@ -97,6 +109,30 @@ class JudgeClient(private val prefs: Prefs) {
             .put("questions", questions)
         val resp = HttpJson.post(url, prefs.judgeKey, body, Route.JUDGE, HttpJson.headersFor(url))
         return resp.optJSONObject("answers") ?: JSONObject()
+    }
+
+    /**
+     * fox-1.5 localized route: standard OpenAI-compatible chat completions.
+     * The state + question set is rendered into one prompt; the model replies
+     * with the same answers JSON the decisions endpoint would have returned.
+     */
+    private fun sendChat(state: JSONObject, questions: JSONObject): JSONObject {
+        val url = prefs.judgeEndpoint()
+        val messages = JSONArray()
+            .put(JSONObject().put("role", "system").put("content", JudgePrompt.SYSTEM))
+            .put(JSONObject().put("role", "user")
+                .put("content", JudgePrompt.userPrompt(state, questions)))
+        val body = JSONObject()
+            .put("model", prefs.judgeModel)
+            .put("messages", messages)
+            .put("temperature", 0)
+        val resp = HttpJson.post(url, prefs.judgeKey, body, Route.JUDGE, HttpJson.headersFor(url))
+        val content = resp.optJSONArray("choices")?.optJSONObject(0)
+            ?.optJSONObject("message")?.optString("content") ?: ""
+        if (content.isBlank()) {
+            throw ApiException(Route.JUDGE, null, "判断模型返回了空内容")
+        }
+        return JudgePrompt.extractAnswers(content)
     }
 
     private fun parseChoice(o: JSONObject?): Choice? {

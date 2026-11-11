@@ -42,7 +42,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
 
     // ---------------------------------------------------------------- judge
 
-    /** "openrouter" | "typesafe" | "custom". */
+    /** "openrouter" | "typesafe" = private decisions protocol; "chat" | "custom" = standard chat completions (fox-1.5). */
     var judgeProvider: String
         get() = sp.getString(K_JUDGE_PROVIDER, PROVIDER_OPENROUTER) ?: PROVIDER_OPENROUTER
         set(v) = sp.edit().putString(K_JUDGE_PROVIDER, v.trim()).apply()
@@ -193,15 +193,19 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
     /** Vision route key, falling back to reply then judge. */
     fun effectiveVisionKey(): String = visionKey.ifBlank { effectiveReplyKey() }
 
-    /** Full POST URL for the Jev decisions call, per provider. */
+    /** Full POST URL for the judge route. Chat providers append /chat/completions. */
     fun judgeEndpoint(): String {
         val base = judgeBaseUrl.trim().trimEnd('/')
         return when (judgeProvider) {
             PROVIDER_TYPESAFE -> "$base/v1/systemone"
-            PROVIDER_CUSTOM -> judgeBaseUrl.trim()   // user supplies the full URL
+            PROVIDER_CHAT, PROVIDER_CUSTOM -> "$base/chat/completions"
             else -> "$base/alpha/decisions"
         }
     }
+
+    /** fox-1.5: judge via standard chat completions (any OpenAI-compatible endpoint). */
+    fun judgeIsChat(): Boolean =
+        judgeProvider == PROVIDER_CHAT || judgeProvider == PROVIDER_CUSTOM
 
     /** Full POST URL for the OpenAI-compatible chat completions call. */
     fun replyEndpoint(): String = "${replyBaseUrl.trim().trimEnd('/')}/chat/completions"
@@ -257,16 +261,30 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
 
         const val PROVIDER_OPENROUTER = "openrouter"
         const val PROVIDER_TYPESAFE = "typesafe"
+        const val PROVIDER_CHAT = "chat"
         const val PROVIDER_CUSTOM = "custom"
 
         const val OCR_MLKIT = "mlkit"
         const val OCR_VISION = "vision"
 
-        // Judge route presets.
+        // Judge route presets (private decisions protocol).
         const val DEFAULT_JUDGE_BASE_OPENROUTER = "https://openrouter.ai/api"
         const val DEFAULT_JUDGE_MODEL_OPENROUTER = "typesafe/jev-1.13"
         const val DEFAULT_JUDGE_BASE_TYPESAFE = "https://api.typesafe.ai"
         const val DEFAULT_JUDGE_MODEL_TYPESAFE = "jev-latest"
+
+        // fox-1.5 judge chat-mode presets (OpenAI-compatible chat completions;
+        // same hosts/models as the reply/vision card presets).
+        const val DEFAULT_JUDGE_BASE_CHAT = "https://generativelanguage.googleapis.com/v1beta/openai"
+        const val DEFAULT_JUDGE_MODEL_CHAT = "gemini-2.5-flash"
+        const val JUDGE_BASE_GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai"
+        const val JUDGE_MODEL_GEMINI = "gemini-2.5-flash"
+        const val JUDGE_BASE_KIMI = "https://api.moonshot.cn/v1"
+        const val JUDGE_MODEL_KIMI = "kimi-k2.6"
+        const val JUDGE_BASE_DEEPSEEK = "https://api.deepseek.com/v1"
+        const val JUDGE_MODEL_DEEPSEEK = "deepseek-chat"
+        const val JUDGE_BASE_DASHSCOPE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        const val JUDGE_MODEL_DASHSCOPE = "qwen-plus"
 
         // Reply route presets (OpenAI-compatible chat completions).
         const val DEFAULT_REPLY_BASE = "https://openrouter.ai/api/v1"

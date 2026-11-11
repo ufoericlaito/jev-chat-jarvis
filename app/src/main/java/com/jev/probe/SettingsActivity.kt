@@ -76,13 +76,19 @@ class SettingsActivity : AppCompatActivity() {
 
         val judgeBaseEdit = edit(prefs.judgeBaseUrl, Prefs.DEFAULT_JUDGE_BASE_OPENROUTER)
         val judgeModelEdit = edit(prefs.judgeModel, Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER)
-        judgeProviderIdx = when (prefs.judgeProvider) {
-            Prefs.PROVIDER_TYPESAFE -> 1
-            Prefs.PROVIDER_CUSTOM -> 2
-            else -> 0
+        // Chat-shaped judge presets (fox-1.5): address wins over pill, so the
+        // initial selection is derived from the stored URL, not the provider.
+        judgeProviderIdx = when (prefs.judgeBaseUrl.trim().trimEnd('/')) {
+            Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> 1
+            Prefs.JUDGE_BASE_GEMINI -> 2
+            Prefs.JUDGE_BASE_KIMI -> 3
+            Prefs.JUDGE_BASE_DEEPSEEK -> 4
+            Prefs.JUDGE_BASE_DASHSCOPE -> 5
+            else -> if (prefs.judgeProvider == Prefs.PROVIDER_CUSTOM) 6 else 0
         }
         judgeCard.addView(pills(
-            listOf("OpenRouter", "TypeSafe 直连", "自定义"), judgeProviderIdx) { idx ->
+            listOf("OpenRouter", "TypeSafe 直连", "Gemini", "Kimi", "DeepSeek 官方", "通义兼容", "自定义"),
+            judgeProviderIdx) { idx ->
             judgeProviderIdx = idx
             when (idx) {
                 0 -> {
@@ -93,15 +99,33 @@ class SettingsActivity : AppCompatActivity() {
                     judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_TYPESAFE)
                     judgeModelEdit.setText(Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE)
                 }
-                // Custom POSTs the box verbatim, so a preset HOST left in the box
-                // would hit the API root. Expand it into the full endpoint the
-                // preset would have used; anything hand-typed is left alone.
-                2 -> judgeBaseEdit.setText(expandJudgeUrl(judgeBaseEdit.text.toString()))
+                2 -> {
+                    judgeBaseEdit.setText(Prefs.JUDGE_BASE_GEMINI)
+                    judgeModelEdit.setText(Prefs.JUDGE_MODEL_GEMINI)
+                }
+                3 -> {
+                    judgeBaseEdit.setText(Prefs.JUDGE_BASE_KIMI)
+                    judgeModelEdit.setText(Prefs.JUDGE_MODEL_KIMI)
+                }
+                4 -> {
+                    judgeBaseEdit.setText(Prefs.JUDGE_BASE_DEEPSEEK)
+                    judgeModelEdit.setText(Prefs.JUDGE_MODEL_DEEPSEEK)
+                }
+                5 -> {
+                    judgeBaseEdit.setText(Prefs.JUDGE_BASE_DASHSCOPE)
+                    judgeModelEdit.setText(Prefs.JUDGE_MODEL_DASHSCOPE)
+                }
+                // Custom = standard chat completions too; if the box still holds
+                // a preset host, translate it into that host's chat base so the
+                // appended /chat/completions lands somewhere sane. Anything
+                // hand-typed is left alone.
+                6 -> judgeBaseEdit.setText(expandJudgeUrl(judgeBaseEdit.text.toString()))
             }
         })
         judgeCard.addView(label("Base URL"))
         judgeCard.addView(judgeBaseEdit)
-        judgeCard.addView(text("OpenRouter 拼 /alpha/decisions；TypeSafe 拼 /v1/systemone；自定义按原样 POST。",
+        judgeCard.addView(text("OpenRouter 拼 /alpha/decisions；TypeSafe 拼 /v1/systemone；" +
+            "Gemini/Kimi/DeepSeek/通义/自定义走标准对话，填到 /v1 自动拼 /chat/completions。",
             11f, sub))
         judgeCard.addView(label("密钥"))
         judgeCard.addView(edit(prefs.judgeKey, "sk-...", password = true).also { judgeKeyEdit = it })
@@ -404,37 +428,47 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun providerOf(idx: Int) = when (idx) {
         1 -> Prefs.PROVIDER_TYPESAFE
-        2 -> Prefs.PROVIDER_CUSTOM
+        2, 3, 4, 5 -> Prefs.PROVIDER_CHAT
+        6 -> Prefs.PROVIDER_CUSTOM
         else -> Prefs.PROVIDER_OPENROUTER
     }
 
     /**
      * The provider actually implied by what is in the address box. A preset host
-     * carries its own path (`/alpha/decisions`, `/v1/systemone`), so leaving that
-     * host in the box while the pill says something else would POST the wrong
-     * path — or, for custom, the bare API root.
+     * carries its own path (`/alpha/decisions`, `/v1/systemone`) or protocol
+     * (`chat/completions` for the chat presets), so leaving that host in the box
+     * while the pill says something else would call the wrong endpoint.
      */
     private fun resolveJudgeProvider(idx: Int, base: String): String =
         when (base.trim().trimEnd('/')) {
             Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.PROVIDER_OPENROUTER
             Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.PROVIDER_TYPESAFE
+            Prefs.JUDGE_BASE_GEMINI, Prefs.JUDGE_BASE_KIMI,
+            Prefs.JUDGE_BASE_DEEPSEEK, Prefs.JUDGE_BASE_DASHSCOPE -> Prefs.PROVIDER_CHAT
             else -> providerOf(idx)
         }
 
-    /** The full endpoint a preset host would have been expanded to. */
+    /** Translate a preset host still sitting in the box into its chat-completions base. */
     private fun expandJudgeUrl(base: String): String = when (base.trim().trimEnd('/')) {
-        Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.DEFAULT_JUDGE_BASE_OPENROUTER + "/alpha/decisions"
-        Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.DEFAULT_JUDGE_BASE_TYPESAFE + "/v1/systemone"
+        Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> "https://openrouter.ai/api/v1"
         else -> base.trim()
     }
 
     private fun defaultJudgeBase(provider: String): String =
-        if (provider == Prefs.PROVIDER_TYPESAFE) Prefs.DEFAULT_JUDGE_BASE_TYPESAFE
-        else Prefs.DEFAULT_JUDGE_BASE_OPENROUTER
+        when (provider) {
+            Prefs.PROVIDER_TYPESAFE -> Prefs.DEFAULT_JUDGE_BASE_TYPESAFE
+            Prefs.PROVIDER_CHAT -> Prefs.DEFAULT_JUDGE_BASE_CHAT
+            // Custom is left exactly as typed (blank included): guessing a URL
+            // for it would silently point somewhere the user did not choose.
+            else -> Prefs.DEFAULT_JUDGE_BASE_OPENROUTER
+        }
 
     private fun defaultJudgeModel(provider: String): String =
-        if (provider == Prefs.PROVIDER_TYPESAFE) Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE
-        else Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER
+        when (provider) {
+            Prefs.PROVIDER_TYPESAFE -> Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE
+            Prefs.PROVIDER_CHAT -> Prefs.DEFAULT_JUDGE_MODEL_CHAT
+            else -> Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER
+        }
 
     /**
      * A throwaway [Prefs] view carrying exactly what is in the boxes right now,
