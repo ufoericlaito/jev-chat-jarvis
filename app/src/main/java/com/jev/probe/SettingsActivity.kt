@@ -79,12 +79,10 @@ class SettingsActivity : AppCompatActivity() {
         judgeProviderIdx = when (prefs.judgeProvider) {
             Prefs.PROVIDER_TYPESAFE -> 1
             Prefs.PROVIDER_CUSTOM -> 2
-            Prefs.PROVIDER_GEMINI -> 3
-            Prefs.PROVIDER_KIMI -> 4
             else -> 0
         }
         judgeCard.addView(pills(
-            listOf("OpenRouter", "TypeSafe 直连", "自定义", "Gemini", "Kimi"), judgeProviderIdx) { idx ->
+            listOf("OpenRouter", "TypeSafe 直连", "自定义"), judgeProviderIdx) { idx ->
             judgeProviderIdx = idx
             when (idx) {
                 0 -> {
@@ -99,19 +97,11 @@ class SettingsActivity : AppCompatActivity() {
                 // would hit the API root. Expand it into the full endpoint the
                 // preset would have used; anything hand-typed is left alone.
                 2 -> judgeBaseEdit.setText(expandJudgeUrl(judgeBaseEdit.text.toString()))
-                3 -> {
-                    judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_GEMINI)
-                    judgeModelEdit.setText(Prefs.DEFAULT_JUDGE_MODEL_GEMINI)
-                }
-                4 -> {
-                    judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_KIMI)
-                    judgeModelEdit.setText(Prefs.DEFAULT_JUDGE_MODEL_KIMI)
-                }
             }
         })
         judgeCard.addView(label("Base URL"))
         judgeCard.addView(judgeBaseEdit)
-        judgeCard.addView(text("OpenRouter 拼 /alpha/decisions；TypeSafe 拼 /v1/systemone；自定义按原样 POST；Gemini / Kimi 拼 /chat/completions。",
+        judgeCard.addView(text("OpenRouter 拼 /alpha/decisions；TypeSafe 拼 /v1/systemone；自定义按原样 POST。",
             11f, sub))
         judgeCard.addView(label("密钥"))
         judgeCard.addView(edit(prefs.judgeKey, "sk-...", password = true).also { judgeKeyEdit = it })
@@ -415,8 +405,6 @@ class SettingsActivity : AppCompatActivity() {
     private fun providerOf(idx: Int) = when (idx) {
         1 -> Prefs.PROVIDER_TYPESAFE
         2 -> Prefs.PROVIDER_CUSTOM
-        3 -> Prefs.PROVIDER_GEMINI
-        4 -> Prefs.PROVIDER_KIMI
         else -> Prefs.PROVIDER_OPENROUTER
     }
 
@@ -430,8 +418,6 @@ class SettingsActivity : AppCompatActivity() {
         when (base.trim().trimEnd('/')) {
             Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.PROVIDER_OPENROUTER
             Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.PROVIDER_TYPESAFE
-            Prefs.DEFAULT_JUDGE_BASE_GEMINI -> Prefs.PROVIDER_GEMINI
-            Prefs.DEFAULT_JUDGE_BASE_KIMI -> Prefs.PROVIDER_KIMI
             else -> providerOf(idx)
         }
 
@@ -439,24 +425,16 @@ class SettingsActivity : AppCompatActivity() {
     private fun expandJudgeUrl(base: String): String = when (base.trim().trimEnd('/')) {
         Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.DEFAULT_JUDGE_BASE_OPENROUTER + "/alpha/decisions"
         Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.DEFAULT_JUDGE_BASE_TYPESAFE + "/v1/systemone"
-        Prefs.DEFAULT_JUDGE_BASE_GEMINI -> Prefs.DEFAULT_JUDGE_BASE_GEMINI + "/chat/completions"
-        Prefs.DEFAULT_JUDGE_BASE_KIMI -> Prefs.DEFAULT_JUDGE_BASE_KIMI + "/chat/completions"
         else -> base.trim()
     }
 
-    private fun defaultJudgeBase(provider: String): String = when (provider) {
-        Prefs.PROVIDER_TYPESAFE -> Prefs.DEFAULT_JUDGE_BASE_TYPESAFE
-        Prefs.PROVIDER_GEMINI -> Prefs.DEFAULT_JUDGE_BASE_GEMINI
-        Prefs.PROVIDER_KIMI -> Prefs.DEFAULT_JUDGE_BASE_KIMI
-        else -> Prefs.DEFAULT_JUDGE_BASE_OPENROUTER
-    }
+    private fun defaultJudgeBase(provider: String): String =
+        if (provider == Prefs.PROVIDER_TYPESAFE) Prefs.DEFAULT_JUDGE_BASE_TYPESAFE
+        else Prefs.DEFAULT_JUDGE_BASE_OPENROUTER
 
-    private fun defaultJudgeModel(provider: String): String = when (provider) {
-        Prefs.PROVIDER_TYPESAFE -> Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE
-        Prefs.PROVIDER_GEMINI -> Prefs.DEFAULT_JUDGE_MODEL_GEMINI
-        Prefs.PROVIDER_KIMI -> Prefs.DEFAULT_JUDGE_MODEL_KIMI
-        else -> Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER
-    }
+    private fun defaultJudgeModel(provider: String): String =
+        if (provider == Prefs.PROVIDER_TYPESAFE) Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE
+        else Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER
 
     /**
      * A throwaway [Prefs] view carrying exactly what is in the boxes right now,

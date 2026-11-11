@@ -42,7 +42,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
 
     // ---------------------------------------------------------------- judge
 
-    /** "openrouter" | "typesafe" | "custom" | "gemini" | "kimi". */
+    /** "openrouter" | "typesafe" | "custom". */
     var judgeProvider: String
         get() = sp.getString(K_JUDGE_PROVIDER, PROVIDER_OPENROUTER) ?: PROVIDER_OPENROUTER
         set(v) = sp.edit().putString(K_JUDGE_PROVIDER, v.trim()).apply()
@@ -199,8 +199,6 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         return when (judgeProvider) {
             PROVIDER_TYPESAFE -> "$base/v1/systemone"
             PROVIDER_CUSTOM -> judgeBaseUrl.trim()   // user supplies the full URL
-            PROVIDER_GEMINI -> "$base/chat/completions"
-            PROVIDER_KIMI -> "$base/chat/completions"
             else -> "$base/alpha/decisions"
         }
     }
@@ -260,8 +258,6 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         const val PROVIDER_OPENROUTER = "openrouter"
         const val PROVIDER_TYPESAFE = "typesafe"
         const val PROVIDER_CUSTOM = "custom"
-        const val PROVIDER_GEMINI = "gemini"
-        const val PROVIDER_KIMI = "kimi"
 
         const val OCR_MLKIT = "mlkit"
         const val OCR_VISION = "vision"
@@ -286,10 +282,6 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         const val DASHSCOPE_VISION_MODEL = "qwen-vl-max"
 
         // Gemini / Kimi presets (OpenAI-compatible chat completions).
-        const val DEFAULT_JUDGE_BASE_GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai"
-        const val DEFAULT_JUDGE_MODEL_GEMINI = "gemini-2.5-flash"
-        const val DEFAULT_JUDGE_BASE_KIMI = "https://api.moonshot.cn/v1"
-        const val DEFAULT_JUDGE_MODEL_KIMI = "kimi-k2.6"
         const val DEFAULT_REPLY_BASE_GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai"
         const val DEFAULT_REPLY_MODEL_GEMINI = "gemini-2.5-flash"
         const val DEFAULT_REPLY_BASE_KIMI = "https://api.moonshot.cn/v1"
