@@ -276,9 +276,9 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         // fox-1.5 judge chat-mode presets (OpenAI-compatible chat completions;
         // same hosts/models as the reply/vision card presets).
         const val DEFAULT_JUDGE_BASE_CHAT = "https://generativelanguage.googleapis.com/v1beta/openai"
-        const val DEFAULT_JUDGE_MODEL_CHAT = "gemini-2.5-flash"
+        const val DEFAULT_JUDGE_MODEL_CHAT = "gemini-3.6-flash"
         const val JUDGE_BASE_GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai"
-        const val JUDGE_MODEL_GEMINI = "gemini-2.5-flash"
+        const val JUDGE_MODEL_GEMINI = "gemini-3.6-flash"
         const val JUDGE_BASE_KIMI = "https://api.moonshot.cn/v1"
         const val JUDGE_MODEL_KIMI = "kimi-k2.6"
         const val JUDGE_BASE_DEEPSEEK = "https://api.deepseek.com/v1"
@@ -301,11 +301,11 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
 
         // Gemini / Kimi presets (OpenAI-compatible chat completions).
         const val DEFAULT_REPLY_BASE_GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai"
-        const val DEFAULT_REPLY_MODEL_GEMINI = "gemini-2.5-flash"
+        const val DEFAULT_REPLY_MODEL_GEMINI = "gemini-3.6-flash"
         const val DEFAULT_REPLY_BASE_KIMI = "https://api.moonshot.cn/v1"
         const val DEFAULT_REPLY_MODEL_KIMI = "kimi-k2.6"
         const val DEFAULT_VISION_BASE_GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai"
-        const val DEFAULT_VISION_MODEL_GEMINI = "gemini-2.5-flash"
+        const val DEFAULT_VISION_MODEL_GEMINI = "gemini-3.6-flash"
         const val DEFAULT_VISION_BASE_KIMI = "https://api.moonshot.cn/v1"
         const val DEFAULT_VISION_MODEL_KIMI = "kimi-k2.6"
 
