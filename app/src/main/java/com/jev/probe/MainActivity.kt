@@ -124,12 +124,13 @@ class MainActivity : AppCompatActivity() {
         runCatching {
             val pi = packageManager.getPackageInfo("com.tencent.mm", 0)
             val ver = pi.versionName ?: "?"
-            val obfuscated = runCatching {
-                // 8.0.52 obfuscated node text; compare against the first obfuscated release.
-                val parts = ver.split(".").mapNotNull { it.toIntOrNull() }
-                parts.size >= 3 && (parts[0] > 8 || (parts[0] == 8 &&
-                    (parts[1] > 0 || (parts[1] == 0 && parts[2] >= 52))))
-            }.getOrDefault(false)
+            // 8.0.52 obfuscated node text. Regex-parse in case versionName has
+            // suffixes like "8.0.52(2620)" which toIntOrNull would drop.
+            val seg = Regex("(\\d+)\\.(\\d+)\\.(\\d+)").find(ver)?.groupValues
+            val obfuscated = if (seg != null) {
+                val (a, b, c) = Triple(seg[1].toInt(), seg[2].toInt(), seg[3].toInt())
+                a > 8 || (a == 8 && (b > 0 || (b == 0 && c >= 52)))
+            } else false
             c.addView(checkLine("微信 v$ver" + if (obfuscated) "（新版·文本混淆）" else "", true,
                 okWord = "已安装", noWord = "未装"))
             if (obfuscated) {

@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- fox-1.6b: Android 11+ package visibility — without these, PackageManager
+         reports "not installed" for every chat app we adapt. -->
+    <queries>
+        <package android:name="com.tencent.mm" />
+        <package android:name="com.tencent.mobileqq" />
+        <package android:name="com.ss.android.lark" />
+        <package android:name="com.twitter.android" />
+    </queries>
+
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
