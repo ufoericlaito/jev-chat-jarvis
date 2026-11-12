@@ -152,6 +152,24 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         get() = sp.getString(K_REL, DEFAULT_REL) ?: DEFAULT_REL
         set(v) = sp.edit().putString(K_REL, v).apply()
 
+    // ---- fox-1.6: switchable relationship profiles ----
+
+    /** All profiles as a JSON array string (ProfileStore owns the schema). */
+    var profilesJson: String
+        get() = sp.getString(K_PROFILES, "") ?: ""
+        set(v) = sp.edit().putString(K_PROFILES, v).apply()
+
+    /** Id of the currently active profile; blank = none (use [relationship]). */
+    var activeProfileId: String
+        get() = sp.getString(K_ACTIVE_PROFILE, "") ?: ""
+        set(v) = sp.edit().putString(K_ACTIVE_PROFILE, v).apply()
+
+    /** The prompt the analysis pipeline should use: active profile wins, else legacy. */
+    fun effectiveRelationship(): String {
+        val p = ProfileStore(this).active()
+        return p?.prompt()?.ifBlank { relationship } ?: relationship
+    }
+
     /** Master on/off for showing the overlay + running analysis. */
     var enabled: Boolean
         get() = sp.getBoolean(K_ENABLED, true)
@@ -252,6 +270,8 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         private const val K_OCR_FALLBACK = "ocr_fallback"
         private const val K_OCR_AUTO = "ocr_auto_analyze"
         private const val K_REL = "relationship"
+        private const val K_PROFILES = "profiles_json"
+        private const val K_ACTIVE_PROFILE = "active_profile_id"
         private const val K_ENABLED = "enabled"
         private const val K_WHITELIST = "whitelist"
         private const val K_OPACITY = "overlay_opacity"

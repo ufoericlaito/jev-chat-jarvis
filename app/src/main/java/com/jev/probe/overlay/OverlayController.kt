@@ -16,12 +16,15 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.jev.probe.core.Analysis
 import com.jev.probe.core.ChatSnapshot
 import com.jev.probe.core.Prefs
+import com.jev.probe.core.Profile
+import com.jev.probe.core.ProfileStore
 import com.jev.probe.core.RankedReply
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -44,6 +47,7 @@ class OverlayController(private val ctx: Context) {
     private var dangerDot: View? = null
     private var panel: LinearLayout? = null
     private var contentBox: LinearLayout? = null
+    private var profileChip: TextView? = null
     private var expanded = false
     private var lp: WindowManager.LayoutParams? = null
 
@@ -168,6 +172,7 @@ class OverlayController(private val ctx: Context) {
             setTypeface(typeface, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
+        header.addView(buildProfileChip())
         header.addView(iconBtn("⚙") { openSettings() })
         header.addView(iconBtn("✕") { toggle() })
         p.addView(header)
@@ -191,6 +196,56 @@ class OverlayController(private val ctx: Context) {
         text = glyph; setTextColor(Color.parseColor("#6B7280")); textSize = 16f
         setPadding(dp(10), dp(2), dp(6), dp(2))
         setOnClickListener { onClick() }
+    }
+
+    // ----------------------------------------------------- fox-1.6 profile chip
+
+    /** Header chip showing the active profile; tap to switch manually. */
+    private fun buildProfileChip(): TextView {
+        val chip = TextView(ctx).apply {
+            textSize = 11f
+            setTextColor(Color.parseColor("#374151"))
+            setPadding(dp(8), dp(3), dp(8), dp(3))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(Color.argb(60, 58, 122, 254))
+            }
+            setOnClickListener { showProfileMenu(this) }
+        }
+        profileChip = chip
+        refreshProfileChip()
+        return chip
+    }
+
+    private fun refreshProfileChip() {
+        val name = ProfileStore(prefs).active()?.name
+        profileChip?.text = name ?: "默认人设"
+    }
+
+    /** Called by the capture service each analysis: shows which profile (if any)
+     *  actually shaped this round, and whether it was an auto whitelist match. */
+    fun setProfileBadge(name: String?, autoMatched: Boolean) {
+        profileChip?.text = when {
+            name == null -> "默认人设"
+            autoMatched -> "$name·自动"
+            else -> name
+        }
+    }
+
+    private fun showProfileMenu(anchor: View) {
+        val store = ProfileStore(prefs)
+        val menu = PopupMenu(ctx, anchor)
+        menu.menu.add(0, -1, 0, "默认人设（不设关系）")
+        store.all().forEachIndexed { i, p -> menu.menu.add(0, i, i + 1, p.name) }
+        menu.setOnMenuItemClickListener { item ->
+            val id = if (item.itemId == -1) null else store.all().getOrNull(item.itemId)?.id
+            store.setActive(id)
+            refreshProfileChip()
+            Toast.makeText(ctx, if (id == null) "已切回默认人设" else "人设：${item.title}",
+                Toast.LENGTH_SHORT).show()
+            true
+        }
+        menu.show()
     }
 
     // --------------------------------------------------------------- gestures

@@ -42,6 +42,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
+        // fox-1.6: seed the 7 preset relationship profiles on first launch.
+        com.jev.probe.core.ProfileStore(prefs).ensurePresets()
         window.decorView.setBackgroundColor(Color.parseColor("#F2F3F5"))
 
         val scroll = ScrollView(this)

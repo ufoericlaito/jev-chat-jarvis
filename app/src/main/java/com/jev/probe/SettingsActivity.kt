@@ -1,5 +1,6 @@
 package com.jev.probe
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
@@ -294,8 +295,20 @@ class SettingsActivity : AppCompatActivity() {
 
         // =================== 分析 ===================
         root.addView(section("分析"))
+
+        // --- fox-1.6: relationship profiles ---
+        val profCard = card()
+        profCard.addView(label("关系人设（Profile）"))
+        val activeProfName = com.jev.probe.core.ProfileStore(prefs).active()?.name
+        profCard.addView(text("当前生效：" + (activeProfName ?: "默认人设（未选）") +
+            " · 预置 7 套模板（职场/死党/恋人/撩妹/家人/客户/网友），可自建、导出、导入。", 12f, sub))
+        val profBtn = android.widget.Button(this).apply { text = "管理人设" }
+        profBtn.setOnClickListener { startActivity(Intent(this, ProfileManagerActivity::class.java)) }
+        profCard.addView(profBtn)
+        root.addView(profCard)
+
         val card2 = card()
-        card2.addView(label("关系描述（给 Jev 判断用）"))
+        card2.addView(label("关系描述（未选人设时的兜底）"))
         val relEdit = edit(prefs.relationship, Prefs.DEFAULT_REL)
         card2.addView(relEdit)
         card2.addView(label("会话白名单（每行一个关键词，空=所有会话）"))

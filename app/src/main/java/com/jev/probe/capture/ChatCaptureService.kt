@@ -16,6 +16,7 @@ import com.jev.probe.core.BubbleRect
 import com.jev.probe.core.ChatSnapshot
 import com.jev.probe.core.Msg
 import com.jev.probe.core.Prefs
+import com.jev.probe.core.ProfileStore
 import com.jev.probe.core.kb.ContextBuilder
 import com.jev.probe.core.kb.KbStore
 import com.jev.probe.jev.JevClient
@@ -247,7 +248,19 @@ open class ChatCaptureService : AccessibilityService() {
         analyzing = true
         main.post { overlay?.showLoading(); overlay?.setNote(snapshot.note) }
         val client = JevClient(prefs)
-        val rel = prefs.relationship
+        // fox-1.6: profile resolution — a profile whose whitelist hits this
+        // conversation's title wins silently (auto-match); otherwise the
+        // manually active profile; otherwise the legacy global relationship.
+        val store = ProfileStore(prefs)
+        val auto = store.all().firstOrNull { p ->
+            p.whitelistKeys().isNotEmpty() && p.whitelistKeys().any { k ->
+                snapshot.title?.contains(k, ignoreCase = true) == true
+            }
+        }
+        val profile = auto ?: store.active()
+        val profPrompt = profile?.prompt()?.trim().orEmpty()
+        val rel = if (profPrompt.isNotBlank()) profPrompt else prefs.relationship
+        main.post { overlay?.setProfileBadge(profile?.name, auto != null) }
         val pkg = activePkg ?: ""
         // Knowledge context first (local file reads only, a few ms), then the two
         // network calls in parallel on the pool. A failure here must never stop
