@@ -118,6 +118,28 @@ class MainActivity : AppCompatActivity() {
         c.addView(checkLine("无障碍", a11y))
         c.addView(checkLine("悬浮窗", overlay))
         c.addView(checkLine("密钥", key, okWord = "已设", noWord = "未设"))
+        // fox-1.6b: surface WeChat presence/version on the readiness card —
+        // "no bubble in WeChat" reports were actually missing-permission cases,
+        // and 8.0.52+ obfuscation needs the OCR fallback the user must allow.
+        runCatching {
+            val pi = packageManager.getPackageInfo("com.tencent.mm", 0)
+            val ver = pi.versionName ?: "?"
+            val obfuscated = runCatching {
+                // 8.0.52 obfuscated node text; compare against the first obfuscated release.
+                val parts = ver.split(".").mapNotNull { it.toIntOrNull() }
+                parts.size >= 3 && (parts[0] > 8 || (parts[0] == 8 &&
+                    (parts[1] > 0 || (parts[1] == 0 && parts[2] >= 52))))
+            }.getOrDefault(false)
+            c.addView(checkLine("微信 v$ver" + if (obfuscated) "（新版·文本混淆）" else "", true,
+                okWord = "已安装", noWord = "未装"))
+            if (obfuscated) {
+                c.addView(text("微信 8.0.52+ 隐藏消息文字，靠截屏 OCR 兜底——首次分析时看到截屏授权弹窗请点「始终允许」。", 11f, sub).apply {
+                    setPadding(0, dp(6), 0, 0)
+                })
+            }
+        }.onFailure {
+            c.addView(checkLine("微信", false, okWord = "已安装", noWord = "未安装"))
+        }
         // History recording is opt-in (off by default). Mention it here, never block on it.
         if (!prefs.contextEnabled) {
             c.addView(text("关联上下文未开启，可在设置里开启", 12f, sub).apply {

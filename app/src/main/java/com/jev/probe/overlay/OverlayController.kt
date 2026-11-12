@@ -115,13 +115,30 @@ class OverlayController(private val ctx: Context) {
         lp = params
 
         val r = FrameLayout(ctx)
-        val p = buildPanel()
+        // fox-1.6b: buildPanel must never kill the whole overlay — if the
+        // profile chip (or any future header widget) crashes on some ROM,
+        // fall back to a bare panel so the bubble still exists.
+        val p = try { buildPanel() } catch (t: Throwable) {
+            android.util.Log.e("JEVASSIST", "buildPanel failed, using bare panel: ${t.message}")
+            LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        }
         val bubbleWrap = buildBubble(params)
         r.addView(p)
         r.addView(bubbleWrap)
         root = r
         try { wm.addView(r, params) } catch (e: Exception) {
             android.util.Log.e("JEVASSIST", "overlay addView failed: ${e.message}"); root = null
+            // fox-1.6b: a silent log leaves the user clueless ("no bubble").
+            // Surface the failure and offer the system settings screen.
+            try {
+                android.widget.Toast.makeText(ctx,
+                    "Jev 悬浮窗创建失败，请检查悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                val i = android.content.Intent(
+                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:${ctx.packageName}"))
+                i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(i)
+            } catch (_: Exception) { }
         }
     }
 

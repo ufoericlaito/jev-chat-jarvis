@@ -86,6 +86,9 @@ open class ChatCaptureService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         prefs = Prefs(this)
+        // fox-1.6b: seed presets even if the user never opened MainActivity
+        // (some launchers go straight to the a11y service after install).
+        ProfileStore(prefs).ensurePresets()
         overlay = OverlayController(this)
         overlay?.onManualAnalyze = {
             currentSnapshot?.let { pendingSnapshot = it; runAnalysis() }
